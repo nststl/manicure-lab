@@ -1,0 +1,5 @@
+POST http://localhost:3001/api/appointments
+    { "client": "6a0e16c87b165c35ae50d9ec",
+    "date": "2026-05-21",
+    "time": "14:30"
+    }
