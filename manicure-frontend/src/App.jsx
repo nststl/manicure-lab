@@ -1,138 +1,147 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getAppointments } from "./api/appointments";
 import { getClients } from "./api/clients";
+import AppointmentsSection from "./components/AppointmentsSection";
+import CalendarSection from "./components/CalendarSection";
+import ClientsSection from "./components/ClientsSection";
+import DashboardSection from "./components/DashboardSection";
+import "./App.css";
 
-const API_URL = "http://localhost:3001/api/clients";
+const VIEWS = [
+  { id: "dashboard", label: "🏠 Головна" },
+  { id: "clients", label: "👤 Клієнти" },
+  { id: "appointments", label: "📅 Записи" },
+  { id: "calendar", label: "📆 Календар" },
+];
 
 function App() {
+  const [view, setView] = useState("dashboard");
   const [clients, setClients] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [appointmentEditTarget, setAppointmentEditTarget] = useState(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-  });
-
-  const [editingId, setEditingId] = useState(null);
-
-  useEffect(() => {
-    loadClients();
+  const loadData = useCallback(async () => {
+    setError("");
+    try {
+      const [clientsRes, appointmentsRes] = await Promise.all([
+        getClients(),
+        getAppointments(),
+      ]);
+      setClients(clientsRes);
+      setAppointments(appointmentsRes);
+    } catch (err) {
+      setError(
+        "Не вдалося підключитися до сервера. Перевір, що backend працює на :3001"
+      );
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  async function loadClients() {
-    try {
-      const res = await getClients();
-      setClients(res);
-    } catch (err) {
-      console.log(err);
-    }
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  function openAppointmentEdit(apt) {
+    setAppointmentEditTarget(apt);
+    setView("appointments");
   }
 
-  function handleChange(e) {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  }
-
-  async function addClient() {
-    await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
-
-    setForm({ name: "", phone: "", email: "" });
-    loadClients();
-  }
-
-  async function deleteClient(id) {
-    await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-    });
-
-    loadClients();
-  }
-
-  function startEdit(client) {
-    setForm({
-      name: client.name,
-      phone: client.phone,
-      email: client.email,
-    });
-
-    setEditingId(client._id);
-  }
-
-  async function updateClient() {
-    await fetch(`${API_URL}/${editingId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
-
-    setForm({ name: "", phone: "", email: "" });
-    setEditingId(null);
-    loadClients();
-  }
+  const today = new Date().toISOString().slice(0, 10);
+  const stats = {
+    clients: clients.length,
+    appointments: appointments.length,
+    today: appointments.filter((a) => a.date === today).length,
+  };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>💅 Manicure Lab</h1>
-
-      <h2>{editingId ? "✏️ Edit client" : "➕ Add client"}</h2>
-
-      <input
-        name="name"
-        placeholder="Name"
-        value={form.name}
-        onChange={handleChange}
-      />
-      <br />
-
-      <input
-        name="phone"
-        placeholder="Phone"
-        value={form.phone}
-        onChange={handleChange}
-      />
-      <br />
-
-      <input
-        name="email"
-        placeholder="Email"
-        value={form.email}
-        onChange={handleChange}
-      />
-      <br />
-
-      <button onClick={editingId ? updateClient : addClient}>
-        {editingId ? "Save" : "Add"}
-      </button>
-
-      <h2>Clients</h2>
-
-      {clients.length === 0 && <p>No clients yet</p>}
-
-      {clients.map((c) => (
-        <div key={c._id} style={{ marginBottom: 10 }}>
-          👤 {c.name} — {c.phone}
-
-          <button style={{ marginLeft: 10 }} onClick={() => startEdit(c)}>
-            Edit
-          </button>
-
-          <button
-            style={{ marginLeft: 10 }}
-            onClick={() => deleteClient(c._id)}
-          >
-            Delete
-          </button>
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-emoji">💅</span>
+          <div>
+            <strong>Manicure Lab</strong>
+            <span className="brand-sub">CRM салону</span>
+          </div>
         </div>
-      ))}
+
+        <nav className="nav">
+          {VIEWS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              className={`nav-item ${view === v.id ? "active" : ""}`}
+              onClick={() => setView(v.id)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-stats">
+          <div className="stat">
+            <span className="stat-value">{stats.clients}</span>
+            <span className="stat-label">клієнтів</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{stats.appointments}</span>
+            <span className="stat-label">записів</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{stats.today}</span>
+            <span className="stat-label">сьогодні</span>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="page-header">
+          <h1>{VIEWS.find((v) => v.id === view)?.label || "💅 Manicure Lab"}</h1>
+          {error && (
+            <div className="alert alert-error">
+              {error}
+              <button type="button" className="btn btn-sm" onClick={loadData}>
+                Повторити
+              </button>
+            </div>
+          )}
+        </header>
+
+        {loading ? (
+          <p className="muted loading">Завантаження...</p>
+        ) : (
+          <>
+            {view === "dashboard" && (
+              <DashboardSection
+                clients={clients}
+                appointments={appointments}
+                onEditAppointment={openAppointmentEdit}
+              />
+            )}
+            {view === "clients" && (
+              <ClientsSection clients={clients} onRefresh={loadData} />
+            )}
+            {view === "appointments" && (
+              <AppointmentsSection
+                appointments={appointments}
+                clients={clients}
+                onRefresh={loadData}
+                editTarget={appointmentEditTarget}
+                onClearEditTarget={() => setAppointmentEditTarget(null)}
+              />
+            )}
+            {view === "calendar" && (
+              <CalendarSection
+                appointments={appointments}
+                onEditAppointment={openAppointmentEdit}
+              />
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }

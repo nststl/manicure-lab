@@ -1,0 +1,10 @@
+{
+  "name": "manicure-lab",
+  "private": true,
+  "description": "CRM для манікюрного салону",
+  "scripts": {
+    "dev:api": "npm run dev --prefix booking-service",
+    "dev:web": "npm run dev --prefix manicure-frontend",
+    "install:all": "npm install --prefix booking-service && npm install --prefix manicure-frontend"
+  }
+}

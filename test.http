@@ -1,5 +1,26 @@
+### Clients
+GET http://localhost:3001/api/clients
+
+###
+POST http://localhost:3001/api/clients
+Content-Type: application/json
+
+{
+  "name": "Олена",
+  "phone": "+380501234567",
+  "email": "olena@example.com"
+}
+
+### Appointments
+GET http://localhost:3001/api/appointments
+
+###
 POST http://localhost:3001/api/appointments
-    { "client": "6a0e16c87b165c35ae50d9ec",
-    "date": "2026-05-21",
-    "time": "14:30"
-    }
+Content-Type: application/json
+
+{
+  "client": "CLIENT_ID_HERE",
+  "date": "2026-05-22",
+  "time": "14:30",
+  "status": "scheduled"
+}
